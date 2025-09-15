@@ -1,0 +1,19 @@
+$dest = "C:\Users\Public\wsl-root-certs"
+if (-not (Test-Path $dest)) { New-Item -ItemType Directory -Force -Path $dest | Out-Null }
+
+# Clean out old files
+Get-ChildItem -Path $dest -Filter *.cer -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+
+$store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
+$store.Open([System.Security.Cryptography.X509Certificates.OpenFlags]::ReadOnly)
+
+$i = 0
+foreach ($c in $store.Certificates) {
+    $bytes = $c.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+    $name = ("{0:D4}-{1}.cer" -f $i, $c.Thumbprint)
+    [System.IO.File]::WriteAllBytes((Join-Path $dest $name), $bytes)
+    $i++
+}
+$store.Close()
+
+Write-Output "Exported $i certs to $dest"
